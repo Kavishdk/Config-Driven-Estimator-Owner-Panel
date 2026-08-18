@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { adminLogin } from '../services/estimatorApi';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { HardHat } from 'lucide-react';
@@ -8,22 +8,22 @@ import { HardHat } from 'lucide-react';
 export default function AdminLoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setErrorMessage('');
+    setIsSubmitting(true);
     try {
-      const res = await api.post('/admin/login', { username, password });
-      localStorage.setItem('adminToken', res.data.token);
+      const { token } = await adminLogin({ username, password });
+      localStorage.setItem('adminToken', token);
       navigate('/admin');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to login');
+      setErrorMessage(err.response?.data?.error || 'Invalid credentials');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -40,24 +40,24 @@ export default function AdminLoginPage() {
             <p className="text-zinc-500 mt-2 font-mono text-xs uppercase tracking-widest">Manage your estimator</p>
           </div>
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-6">
             <Input 
               label="Username" 
               value={username}
-              onChange={(e: any) => setUsername(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
               required
             />
             <Input 
               label="Password" 
               type="password"
               value={password}
-              onChange={(e: any) => setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               required
             />
             
-            {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
+            {errorMessage && <p className="text-sm text-red-500 font-medium">{errorMessage}</p>}
             
-            <Button type="submit" isLoading={loading} className="w-full">
+            <Button type="submit" isLoading={isSubmitting} className="w-full">
               Sign In
             </Button>
           </form>

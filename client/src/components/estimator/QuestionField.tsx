@@ -1,28 +1,12 @@
 import React from 'react';
 import { Input } from '../common/Input';
 import { cn } from '../common/Button';
-
-interface Option {
-  id: string;
-  value: string;
-  label: string;
-}
-
-interface Question {
-  id: string;
-  key: string;
-  label: string;
-  type: string;
-  unit?: string | null;
-  min?: number | null;
-  max?: number | null;
-  options: Option[];
-}
+import { Question } from '../../types';
 
 interface QuestionFieldProps {
   question: Question;
   value: any;
-  onChange: (val: any) => void;
+  onChange: (value: any) => void;
   error?: string;
 }
 

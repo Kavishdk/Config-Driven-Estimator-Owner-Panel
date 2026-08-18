@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { fetchAdminConfiguration, fetchCapturedLeads } from '../services/estimatorApi';
 import { Button } from '../components/common/Button';
 import { LogOut, LayoutDashboard, Settings, Users } from 'lucide-react';
 import ConfigEditor from '../components/owner/ConfigEditor';
@@ -79,25 +79,25 @@ export default function AdminDashboardPage() {
 
 function OverviewPanel() {
   const [stats, setStats] = useState({ totalLeads: 0, activeVersion: 0 });
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      api.get('/admin/leads'),
-      api.get('/admin/config')
-    ]).then(([leadsRes, configRes]) => {
+      fetchCapturedLeads(),
+      fetchAdminConfiguration()
+    ]).then(([leads, configuration]) => {
       setStats({
-        totalLeads: leadsRes.data.data.length,
-        activeVersion: configRes.data.data?.version || 0
+        totalLeads: leads.length,
+        activeVersion: configuration.version || 0
       });
-      setLoading(false);
+      setIsLoading(false);
     }).catch(err => {
-      console.error(err);
-      setLoading(false);
+      console.error('Failed to load dashboard overview:', err);
+      setIsLoading(false);
     });
   }, []);
 
-  if (loading) return <div className="text-zinc-500 font-medium">Loading overview...</div>;
+  if (isLoading) return <div className="text-zinc-500 font-medium">Loading overview...</div>;
 
   return (
     <div className="space-y-6 font-sans">

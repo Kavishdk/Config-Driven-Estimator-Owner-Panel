@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export async function getActiveConfiguration() {
-  const config = await prisma.configVersion.findFirst({
+  const configuration = await prisma.configVersion.findFirst({
     where: { isActive: true },
     include: {
       questions: {
@@ -16,34 +16,111 @@ export async function getActiveConfiguration() {
     }
   });
 
-  if (!config) {
+  if (!configuration) {
     throw new Error('Active configuration not found');
   }
 
-  return config;
+  return configuration;
 }
 
-export function sanitizeConfigForPublic(config: any) {
-  // Strip sensitive internal data and pricing rates from frontend
+export async function getAdminConfiguration() {
+  const configuration = await prisma.configVersion.findFirst({
+    where: { isActive: true },
+    include: {
+      questions: {
+        orderBy: { order: 'asc' },
+        include: {
+          options: true
+        }
+      }
+    }
+  });
+
+  return configuration;
+}
+
+export async function createNewConfigurationVersion(newConfigData: any) {
+  return await prisma.$transaction(async (tx) => {
+    const currentActiveConfig = await tx.configVersion.findFirst({
+      where: { isActive: true },
+      orderBy: { version: 'desc' }
+    });
+    
+    const nextVersionNumber = (currentActiveConfig?.version || 0) + 1;
+    
+    if (currentActiveConfig) {
+      await tx.configVersion.update({
+        where: { id: currentActiveConfig.id },
+        data: { isActive: false }
+      });
+    }
+    
+    return await tx.configVersion.create({
+      data: {
+        version: nextVersionNumber,
+        businessName: newConfigData.businessName || 'Northline Roofing & Exteriors',
+        region: newConfigData.region || 'Columbus, OH',
+        currency: newConfigData.currency || 'USD',
+        wasteFactor: Number(newConfigData.wasteFactor),
+        permitFlatFee: Number(newConfigData.permitFlatFee),
+        rangeSpreadPct: Number(newConfigData.rangeSpreadPct),
+        isActive: true,
+        questions: {
+          create: newConfigData.questions.map((question: any) => ({
+            key: question.key,
+            label: question.label,
+            type: question.type,
+            unit: question.unit || null,
+            required: Boolean(question.required),
+            min: question.min !== undefined && question.min !== null ? Number(question.min) : null,
+            max: question.max !== undefined && question.max !== null ? Number(question.max) : null,
+            active: Boolean(question.active),
+            order: Number(question.order),
+            options: {
+              create: (question.options || []).map((option: any) => ({
+                value: option.value,
+                label: option.label,
+                ratePerSqft: option.ratePerSqft !== undefined && option.ratePerSqft !== null ? Number(option.ratePerSqft) : null,
+                multiplier: option.multiplier !== undefined && option.multiplier !== null ? Number(option.multiplier) : null,
+                tearOffPerSqft: option.tearOffPerSqft !== undefined && option.tearOffPerSqft !== null ? Number(option.tearOffPerSqft) : null,
+              }))
+            }
+          }))
+        }
+      },
+      include: {
+        questions: {
+          orderBy: { order: 'asc' },
+          include: {
+            options: true
+          }
+        }
+      }
+    });
+  });
+}
+
+export function sanitizeConfigForPublic(configuration: any) {
+  // Strip proprietary pricing rates, multipliers, and internal parameters before sending to client
   return {
-    id: config.id,
-    version: config.version,
-    businessName: config.businessName,
-    region: config.region,
-    currency: config.currency,
-    questions: config.questions.map((q: any) => ({
-      id: q.id,
-      key: q.key,
-      label: q.label,
-      type: q.type,
-      unit: q.unit,
-      required: q.required,
-      min: q.min,
-      max: q.max,
-      options: q.options.map((o: any) => ({
-        id: o.id,
-        value: o.value,
-        label: o.label
+    id: configuration.id,
+    version: configuration.version,
+    businessName: configuration.businessName,
+    region: configuration.region,
+    currency: configuration.currency,
+    questions: configuration.questions.map((question: any) => ({
+      id: question.id,
+      key: question.key,
+      label: question.label,
+      type: question.type,
+      unit: question.unit,
+      required: question.required,
+      min: question.min,
+      max: question.max,
+      options: question.options.map((option: any) => ({
+        id: option.id,
+        value: option.value,
+        label: option.label
       }))
     }))
   };

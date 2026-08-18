@@ -1,27 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import api from '../../services/api';
+import { fetchCapturedLeads } from '../../services/estimatorApi';
+import { CapturedLead } from '../../types';
 
 export default function LeadsViewer() {
-  const [leads, setLeads] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [leads, setLeads] = useState<CapturedLead[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get('/admin/leads')
-      .then(res => {
-        setLeads(res.data.data);
-        setLoading(false);
+    fetchCapturedLeads()
+      .then((loadedLeads) => {
+        setLeads(loadedLeads);
+        setIsLoading(false);
       })
-      .catch(err => {
-        console.error(err);
-        setError('Failed to load leads');
-        setLoading(false);
+      .catch((error) => {
+        console.error('Failed to load leads:', error);
+        setErrorMessage('Failed to load leads');
+        setIsLoading(false);
       });
   }, []);
 
-  if (loading) return <div className="text-zinc-500 font-medium">Loading leads...</div>;
-  if (error) return <div className="text-red-500 font-medium">{error}</div>;
+  if (isLoading) return <div className="text-zinc-500 font-medium">Loading leads...</div>;
+  if (errorMessage) return <div className="text-red-500 font-medium">{errorMessage}</div>;
 
   return (
     <div className="space-y-6 font-sans">
@@ -38,7 +39,7 @@ export default function LeadsViewer() {
             <div key={lead.id} className="bg-zinc-900/40 rounded-[2.5rem] border border-zinc-800 overflow-hidden relative">
               <div 
                 className="p-6 sm:p-8 cursor-pointer hover:bg-zinc-800/30 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                onClick={() => setExpandedId(expandedId === lead.id ? null : lead.id)}
+                onClick={() => setExpandedLeadId(expandedLeadId === lead.id ? null : lead.id)}
               >
                 <div>
                   <h3 className="text-xl font-medium text-zinc-100">{lead.name}</h3>
@@ -58,7 +59,7 @@ export default function LeadsViewer() {
                 </div>
               </div>
               
-              {expandedId === lead.id && (
+              {expandedLeadId === lead.id && (
                 <div className="p-6 sm:p-8 bg-zinc-900/80 border-t border-zinc-800">
                   <h4 className="text-[10px] font-bold text-zinc-500 mb-6 uppercase tracking-[0.2em]">Estimate Details</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
