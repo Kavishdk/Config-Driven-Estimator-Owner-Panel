@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ConfigVersion {
+  id             String     @id @default(uuid())
+  version        Int
+  businessName   String
+  region         String
+  currency       String
+  wasteFactor    Float
+  permitFlatFee  Float
+  rangeSpreadPct Float
+  isActive       Boolean    @default(false)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  questions      Question[]
+  leads          Lead[]
+}
+
+model Question {
+  id              String           @id @default(uuid())
+  configVersionId String
+  configVersion   ConfigVersion    @relation(fields: [configVersionId], references: [id], onDelete: Cascade)
+  key             String
+  label           String
+  type            String           
+  unit            String?
+  required        Boolean          @default(true)
+  min             Float?
+  max             Float?
+  active          Boolean          @default(true)
+  order           Int
+
+  options         QuestionOption[]
+}
+
+model QuestionOption {
+  id             String   @id @default(uuid())
+  questionId     String
+  question       Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  value          String
+  label          String
+  ratePerSqft    Float?
+  multiplier     Float?
+  tearOffPerSqft Float?
+}
+
+model Lead {
+  id              String        @id @default(uuid())
+  capturedAt      DateTime      @default(now())
+  configVersionId String
+  configVersion   ConfigVersion @relation(fields: [configVersionId], references: [id])
+  name            String
+  phone           String
+  email           String
+  answers         String
+  estimateLow     Int
+  estimateHigh    Int
+}
