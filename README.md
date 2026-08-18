@@ -1,25 +1,28 @@
 # Northline Roofing Estimator
 
 ## Overview
-A dynamic, configuration-driven full-stack roofing estimator application for Northline Roofing & Exteriors.
-The platform features a public-facing estimator and a secure owner panel for managing questions, pricing parameters, and viewing captured leads.
+A dynamic, configuration-driven full-stack roofing estimator application for **Northline Roofing & Exteriors**.
+The platform features a public-facing estimator for homeowners and a secure owner panel for managing questions, pricing parameters, and viewing captured leads.
 
 ## Features
-- **Public Estimator:** Dynamic form steps rendered purely from the database configuration. Includes real-time validation and server-side quote calculation.
-- **Owner Panel:** Secure dashboard to view leads and actively edit the business pricing configuration (multipliers, flat rates, enabled questions).
-- **Configuration Versioning:** When an owner modifies the pricing parameters, a new configuration version is generated. Existing submitted leads are firmly tied to the version that generated their estimates.
+- **Public Estimator:** Dynamic form steps rendered purely from the database configuration. Includes client-side validation, contact capture, and secure server-side quote calculation.
+- **Owner Panel:** Secure dashboard to view leads and actively edit business pricing rules (multipliers, flat rates, question visibility, option labels).
+- **Configuration Versioning:** When an owner modifies pricing parameters, a new configuration version is generated in a database transaction. Historical leads remain firmly tied to the exact version that generated their estimates.
 
-## Architecture
+## Architecture & Tech Stack
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS
 - **Backend:** Node.js + Express + TypeScript
-- **Database:** PostgreSQL accessed via Prisma ORM
+- **Database:** PostgreSQL (Neon) accessed via Prisma ORM
+- **Authentication:** JWT-based authentication for owner endpoints
 
-## Local Setup
+---
+
+## Local Setup & Development
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
-   cd wantace-roof-estimator
+   git clone https://github.com/Kavishdk/Config-Driven-Estimator-Owner-Panel.git
+   cd Config-Driven-Estimator-Owner-Panel
    ```
 
 2. **Install dependencies:**
@@ -28,14 +31,21 @@ The platform features a public-facing estimator and a secure owner panel for man
    ```
 
 3. **Configure Environment Variables:**
-   A `.env.example` file is provided in both `client/` and `server/`.
-   Copy them to `.env` if not already set.
+   Create a `.env` file inside `server/` with your database credentials:
+   ```env
+   PORT=5000
+   DATABASE_URL="postgresql://<user>:<password>@<neon-host>/neondb?sslmode=require"
+   JWT_SECRET="super-secret-jwt-key"
+   ADMIN_USERNAME="admin"
+   ADMIN_PASSWORD="password123"
+   CLIENT_URL="http://localhost:3000"
+   ```
 
 4. **Database Setup:**
-   Run the Prisma migration and seed script to populate the initial configuration and historical leads.
+   Push the Prisma schema to your database and seed initial configuration (v3) & leads:
    ```bash
    cd server
-   npx prisma migrate dev
+   npm run db:push
    npm run db:seed
    ```
 
@@ -49,33 +59,51 @@ The platform features a public-facing estimator and a secure owner panel for man
    - Owner Panel: `http://localhost:3000/admin`
    - Backend API: `http://localhost:5000`
 
+---
+
 ## Test Credentials
-To access the Owner Panel locally:
+To access the Owner Panel:
 - **Username:** `admin`
 - **Password:** `password123`
 
-*(These are configured in `server/.env` via `ADMIN_USERNAME` and `ADMIN_PASSWORD`)*
+---
 
 ## Running Tests
-Calculator and business logic tests are implemented in the `server` package.
+Calculator and business logic tests are implemented in the `server` package:
 ```bash
 cd server
 npm test
 ```
 
-## API Endpoints
+---
 
-### Public
-- `GET /api/config`: Fetch the currently active configuration.
-- `POST /api/estimate`: Submit customer answers and receive calculated estimates.
+## Production Deployment Guide
 
-### Admin (Requires JWT)
-- `POST /api/admin/login`: Authenticate owner.
-- `GET /api/admin/config`: Fetch active configuration (including editable pricing rates).
-- `PUT /api/admin/config`: Save a new configuration version.
-- `GET /api/admin/leads`: Fetch all captured leads.
+### 1. Database Deployment (Neon PostgreSQL)
+1. Log in to [Neon Console](https://console.neon.tech/) and create a PostgreSQL database.
+2. Copy the connection string with `?sslmode=require`.
 
-## Deployment
-- **Frontend:** Can be deployed statically to Vercel or Netlify. Set `VITE_API_URL` to your production backend URL.
-- **Backend:** Can be deployed to Render, Railway, or Heroku as a standard Node.js server. Provide `DATABASE_URL` and `JWT_SECRET`.
-- **Database:** Provision a PostgreSQL instance using Supabase or Neon.
+### 2. Backend Deployment (Render / Railway)
+1. Go to [Render](https://render.com/) or [Railway](https://railway.app/) and create a new **Web Service** connected to this GitHub repo.
+2. Set the service settings:
+   - **Root Directory:** `server`
+   - **Build Command:** `npm install && npm run build`
+   - **Start Command:** `npm start`
+3. Add Environment Variables:
+   - `DATABASE_URL`: *(Your Neon PostgreSQL connection string)*
+   - `JWT_SECRET`: *(A secure random string)*
+   - `ADMIN_USERNAME`: `admin`
+   - `ADMIN_PASSWORD`: `password123`
+   - `NODE_ENV`: `production`
+4. Deploy the service and copy the deployed backend URL (e.g., `https://northline-estimator-api.onrender.com`).
+
+### 3. Frontend Deployment (Vercel / Netlify)
+1. Go to [Vercel](https://vercel.com/) or [Netlify](https://www.netlify.com/) and import this repository.
+2. Set the project configuration:
+   - **Framework Preset:** `Vite`
+   - **Root Directory:** `client`
+   - **Build Command:** `npm run build`
+   - **Output Directory:** `dist`
+3. Add Environment Variable:
+   - `VITE_API_URL`: *(Your deployed backend API URL, e.g. `https://northline-estimator-api.onrender.com/api`)*
+4. Deploy!
