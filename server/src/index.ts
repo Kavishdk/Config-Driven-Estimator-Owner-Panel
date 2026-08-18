@@ -20,10 +20,27 @@ app.get('/api/health', (req, res) => {
 app.use('/api', publicRoutes);
 app.use('/api/admin', adminRoutes);
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../../client/dist')));
+import fs from 'fs';
+
+const clientDistPath = path.join(__dirname, '../../client/dist');
+
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.json({
+      status: 'online',
+      message: 'Northline Roofing Estimator API is running.',
+      endpoints: {
+        health: '/api/health',
+        config: '/api/config',
+        estimate: '/api/estimate',
+        admin: '/api/admin/*'
+      }
+    });
   });
 }
 
